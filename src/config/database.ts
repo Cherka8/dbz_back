@@ -3,57 +3,27 @@ import dotenv from 'dotenv';
 
 dotenv.config(); // Load environment variables from .env file
 
-// Fonction de débogage pour afficher les variables d'environnement pertinentes de Railway
-function debugRailwayVariables() {
-  console.log('\n=== RAILWAY MYSQL VARIABLES DEBUG ===');
-  console.log('MYSQL_URL:', process.env.MYSQL_URL ? 'Défini (masqué)' : 'Non défini');
-  console.log('MYSQL_DATABASE:', process.env.MYSQL_DATABASE);
-  console.log('MYSQLHOST:', process.env.MYSQLHOST);
-  console.log('MYSQLUSER:', process.env.MYSQLUSER);
-  console.log('MYSQLPORT:', process.env.MYSQLPORT);
-  console.log('MYSQLPASSWORD:', process.env.MYSQLPASSWORD ? 'Défini (longueur: ' + process.env.MYSQLPASSWORD.length + ')' : 'Non défini');
-  console.log('MYSQL_ROOT_PASSWORD:', process.env.MYSQL_ROOT_PASSWORD ? 'Défini (longueur: ' + process.env.MYSQL_ROOT_PASSWORD.length + ')' : 'Non défini');
-  console.log('MYSQL_PUBLIC_URL:', process.env.MYSQL_PUBLIC_URL ? 'Défini (masqué)' : 'Non défini');
-  console.log('=== FIN DES VARIABLES RAILWAY ===\n');
-}
+// URL publique MySQL fournie par Railway
+const MYSQL_PUBLIC_URL = process.env.MYSQL_PUBLIC_URL || 'mysql://root:JlbiPXIefNsJoTyOKpUQBnYeWQBWESsS@mainline.proxy.rlwy.net:17032/railway';
 
-// Exécuter la fonction de débogage au démarrage
-debugRailwayVariables();
-
-// Déterminer les paramètres de connexion en utilisant les variables Railway
-const dbName = process.env.MYSQL_DATABASE || process.env.MYSQLDATABASE || 'railway';
-const dbUser = process.env.MYSQLUSER || 'root';
-const dbHost = process.env.MYSQLHOST || 'mysql.railway.internal';
-const dbPassword = process.env.MYSQLPASSWORD || process.env.MYSQL_ROOT_PASSWORD || '';
-const dbPort = process.env.MYSQLPORT ? parseInt(process.env.MYSQLPORT, 10) : 3306;
-
-// Afficher les paramètres de connexion qui seront utilisés
-console.log('=== PARAMÈTRES DE CONNEXION À LA BASE DE DONNÉES ===');
-console.log('Host:', dbHost);
-console.log('Database:', dbName);
-console.log('User:', dbUser);
-console.log('Port:', dbPort);
-console.log('Password défini:', dbPassword ? 'Oui (longueur: ' + dbPassword.length + ')' : 'Non');
+// Afficher les informations de débogage
+console.log('\n=== CONNEXION MYSQL AVEC URL PUBLIQUE ===');
+console.log('Utilisation de l\'URL publique MySQL (masquée):', MYSQL_PUBLIC_URL.replace(/:[^:]*@/, ':****@'));
 
 // Déclarer la variable sequelize
 let sequelize: Sequelize;
 
-// Créer une instance Sequelize avec les paramètres Railway explicites
-console.log('\n=== TENTATIVE DE CONNEXION AVEC LES PARAMÈTRES RAILWAY ===');
+// Créer une instance Sequelize directement avec l'URL publique
+console.log('\n=== TENTATIVE DE CONNEXION AVEC URL PUBLIQUE ===');
 
-// Afficher les premiers caractères du mot de passe pour vérification
-if (dbPassword) {
-  console.log('Premiers caractères du mot de passe:', dbPassword.substring(0, 3) + '...');
-}
-
-sequelize = new Sequelize(dbName, dbUser, dbPassword, {
-  host: dbHost,
-  port: dbPort,
+sequelize = new Sequelize(MYSQL_PUBLIC_URL, {
   dialect: 'mysql',
   logging: true, // Activer les logs SQL pour le débogage
   dialectOptions: {
-    // Désactiver SSL pour le diagnostic initial
-    ssl: null
+    // Configuration SSL pour connexions externes
+    ssl: {
+      rejectUnauthorized: false
+    }
   }
 });
 
