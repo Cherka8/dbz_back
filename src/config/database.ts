@@ -70,10 +70,15 @@ export const connectDB = async () => {
     await sequelize.authenticate();
     console.log('💾[database]: Connection has been established successfully.');
     
-    // Sync database schema in development environment
-    if (process.env.NODE_ENV !== 'production') {
+    // Sync database schema
+    // En production, on synchronise une seule fois au démarrage
+    // En développement, on utilise alter:true pour mettre à jour le schéma automatiquement
+    if (process.env.NODE_ENV === 'production') {
+      await sequelize.sync({ force: false }); // Ne pas forcer la recréation des tables
+      console.log("Production: Database schema synchronized.");
+    } else {
       await sequelize.sync({ alter: true });
-      console.log("All models were synchronized successfully.");
+      console.log("Development: All models were synchronized with alter:true.");
     }
   } catch (error) {
     console.error('❌[database]: Unable to connect to the database:', error);
