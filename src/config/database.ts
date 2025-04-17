@@ -13,17 +13,46 @@ const dbPort = process.env.DB_PORT || process.env.MYSQLDATABASE_PORT ? parseInt(
 // Log database connection info (without sensitive data)
 console.log(`Attempting to connect to database: ${dbName} on host: ${dbHost}:${dbPort}`);
 
-// Create Sequelize instance
-const sequelize = new Sequelize(dbName, dbUser, dbPassword, {
-  host: dbHost,
-  port: dbPort,
-  dialect: 'mysql',
-  logging: false, // Set to console.log to see SQL queries
-  dialectOptions: {
-    // Additional options for Railway MySQL
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false
-  }
+// Log environment for debugging
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('Available MySQL env vars:', {
+  MYSQL_URL: process.env.MYSQL_URL ? 'Set' : 'Not set',
+  MYSQL_PUBLIC_URL: process.env.MYSQL_PUBLIC_URL ? 'Set' : 'Not set',
+  MYSQL_DATABASE: process.env.MYSQL_DATABASE,
+  DB_HOST: dbHost,
+  DB_NAME: dbName,
+  DB_PORT: dbPort
 });
+
+// Declare sequelize variable
+let sequelize: Sequelize;
+
+// Check if we have a full connection URL from Railway
+if (process.env.MYSQL_URL && process.env.NODE_ENV === 'production') {
+  console.log('Using MYSQL_URL for database connection');
+  // Create Sequelize instance using connection URL
+  sequelize = new Sequelize(process.env.MYSQL_URL, {
+    dialect: 'mysql',
+    logging: false,
+    dialectOptions: {
+      ssl: {
+        rejectUnauthorized: true
+      }
+    }
+  });
+} else {
+  console.log('Using individual connection parameters');
+  // Create Sequelize instance using individual parameters
+  sequelize = new Sequelize(dbName, dbUser, dbPassword, {
+    host: dbHost,
+    port: dbPort,
+    dialect: 'mysql',
+    logging: false,
+    dialectOptions: {
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false
+    }
+  });
+}
 
 export const connectDB = async () => {
   try {
