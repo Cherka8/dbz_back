@@ -53,9 +53,7 @@ export const connectDB = async () => {
   } catch (error) {
     console.error('❌[database]: Unable to connect to the database:', error);
     console.error('Database connection details (without credentials):');
-    console.error(`- Host: ${dbHost}`);
-    console.error(`- Database: ${dbName}`);
-    console.error(`- Port: ${dbPort}`);
+    console.error(`- URL: ${MYSQL_PUBLIC_URL.replace(/:[^:]*@/, ':****@')}`);
     console.error('Please check your environment variables and database configuration.');
     
     // In production, we'll retry a few times before giving up
