@@ -39,20 +39,37 @@ console.log('MYSQL_ROOT_PASSWORD defined:', process.env.MYSQL_ROOT_PASSWORD ? 'Y
 // Declare sequelize variable
 let sequelize: Sequelize;
 
-// If we have a connection URL (preferred for Railway), use it
-if (useConnectionUrl) {
-  console.log('Using connection URL for database:', connectionUrl.replace(/:[^:]*@/, ':****@')); // Masquer le mot de passe dans les logs
-  sequelize = new Sequelize(connectionUrl, {
+// Essayer de construire une URL de connexion directement à partir des variables MYSQL_* de Railway
+if (process.env.MYSQL_ROOT_PASSWORD && process.env.NODE_ENV === 'production') {
+  const directUrl = `mysql://root:${process.env.MYSQL_ROOT_PASSWORD}@mysql.railway.internal:3306/railway`;
+  console.log('Constructed direct URL from MYSQL_ROOT_PASSWORD');
+  
+  sequelize = new Sequelize(directUrl, {
     dialect: 'mysql',
-    logging: false,
+    logging: console.log, // Activer les logs SQL pour le débogage
     dialectOptions: {
-      // Important for Railway: disable SSL verification in production
-      ssl: process.env.NODE_ENV === 'production' ? {
+      ssl: {
         rejectUnauthorized: false
-      } : false
+      }
     }
   });
-} else {
+}
+// Si nous avons une URL de connexion (préféré pour Railway), utilisons-la
+else if (useConnectionUrl) {
+  console.log('Using connection URL for database:', connectionUrl.replace(/:[^:]*@/, ':****@')); // Masquer le mot de passe dans les logs
+  
+  sequelize = new Sequelize(connectionUrl, {
+    dialect: 'mysql',
+    logging: console.log, // Activer les logs SQL pour le débogage
+    dialectOptions: {
+      ssl: {
+        rejectUnauthorized: false
+      }
+    }
+  });
+} 
+// Dernier recours: utiliser les paramètres individuels
+else {
   console.log('Using individual connection parameters');
   // Utiliser MYSQL_ROOT_PASSWORD si disponible et que DB_PASSWORD n'est pas défini
   const password = dbPassword || process.env.MYSQL_ROOT_PASSWORD || '';
@@ -62,11 +79,11 @@ if (useConnectionUrl) {
     host: dbHost,
     port: dbPort,
     dialect: 'mysql',
-    logging: false,
+    logging: console.log, // Activer les logs SQL pour le débogage
     dialectOptions: {
-      ssl: process.env.NODE_ENV === 'production' ? {
+      ssl: {
         rejectUnauthorized: false
-      } : false
+      }
     }
   });
 }
