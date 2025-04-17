@@ -2,18 +2,9 @@ import { Request, Response, RequestHandler } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken'; // Import jsonwebtoken
 import { Op } from 'sequelize';
-import dotenv from 'dotenv'; // Import dotenv to access environment variables
 import User from '../models/User';
 import { AuthRequest } from '../middleware/authMiddleware'; // Import AuthRequest
-
-dotenv.config(); // Load environment variables from .env file
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-    console.error('FATAL ERROR: JWT_SECRET is not defined in .env file');
-    process.exit(1); // Exit if JWT_SECRET is not set
-}
+import getJwtSecret from '../config/jwtConfig'; // Importer la fonction centralisée
 
 // --- Contrôleur pour l'inscription ---
 export const register: RequestHandler = async (req, res) => {
@@ -114,7 +105,7 @@ export const login: RequestHandler = async (req, res) => {
 
         jwt.sign(
             payload,
-            JWT_SECRET, // Utiliser la clé secrète chargée depuis .env
+            getJwtSecret(), // Utiliser la fonction centralisée pour obtenir la clé secrète
             { expiresIn: '1h' }, // Le token expirera dans 1 heure (vous pouvez ajuster)
             (err, token) => {
                 if (err) throw err; // Gérer l'erreur de signature

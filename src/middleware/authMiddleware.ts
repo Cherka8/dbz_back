@@ -1,10 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const JWT_SECRET = process.env.JWT_SECRET;
+import getJwtSecret from '../config/jwtConfig'; // Importer la fonction centralisée
 
 // Interface pour étendre l'objet Request d'Express et y ajouter la propriété 'user'
 export interface AuthRequest extends Request {
@@ -21,7 +17,7 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction) => 
             token = req.headers.authorization.split(' ')[1];
 
             // Vérifier le token avec la clé secrète
-            const decoded = jwt.verify(token, JWT_SECRET!) as { user: { id: string } }; // Assert JWT_SECRET is not null
+            const decoded = jwt.verify(token, getJwtSecret()) as { user: { id: string } }; // Utiliser la fonction centralisée
 
             // Attacher l'utilisateur décodé à l'objet req
             // Important: On pourrait vouloir récupérer l'utilisateur complet de la BDD ici
