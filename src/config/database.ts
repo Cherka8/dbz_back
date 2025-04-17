@@ -3,53 +3,51 @@ import dotenv from 'dotenv';
 
 dotenv.config(); // Load environment variables from .env file
 
-// Support for Railway's MySQL environment variables
-const dbName = process.env.DB_NAME || process.env.MYSQLDATABASE_DATABASE || 'dbz_db';
-const dbUser = process.env.DB_USER || process.env.MYSQLDATABASE_USERNAME || 'root';
-const dbHost = process.env.DB_HOST || process.env.MYSQLDATABASE_HOST || 'localhost';
-const dbPassword = process.env.DB_PASSWORD || process.env.MYSQLDATABASE_PASSWORD || '';
-const dbPort = process.env.DB_PORT || process.env.MYSQLDATABASE_PORT ? parseInt(process.env.DB_PORT || process.env.MYSQLDATABASE_PORT || '3306', 10) : 3306;
+// Prioritize direct connection URL for Railway
+const connectionUrl = process.env.MYSQL_URL || process.env.DATABASE_URL;
 
-// Log database connection info (without sensitive data)
-console.log(`Attempting to connect to database: ${dbName} on host: ${dbHost}:${dbPort}`);
+// Fallback to individual connection parameters if no URL is available
+const dbName = process.env.DB_NAME || 'railway';
+const dbUser = process.env.DB_USER || 'root';
+const dbHost = process.env.DB_HOST || 'mysql.railway.internal';
+const dbPassword = process.env.DB_PASSWORD || '';
+const dbPort = process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 3306;
 
-// Log environment for debugging
+// Log connection details for debugging (without sensitive info)
+console.log('=== DATABASE CONNECTION INFO ===');
 console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('Available MySQL env vars:', {
-  MYSQL_URL: process.env.MYSQL_URL ? 'Set' : 'Not set',
-  MYSQL_PUBLIC_URL: process.env.MYSQL_PUBLIC_URL ? 'Set' : 'Not set',
-  MYSQL_DATABASE: process.env.MYSQL_DATABASE,
-  DB_HOST: dbHost,
-  DB_NAME: dbName,
-  DB_PORT: dbPort
-});
+console.log('Connection URL available:', connectionUrl ? 'Yes' : 'No');
+console.log('Host:', dbHost);
+console.log('Database:', dbName);
+console.log('Port:', dbPort);
 
 // Declare sequelize variable
 let sequelize: Sequelize;
 
-// Check if we have a full connection URL from Railway
-if (process.env.MYSQL_URL && process.env.NODE_ENV === 'production') {
-  console.log('Using MYSQL_URL for database connection');
-  // Create Sequelize instance using connection URL
-  sequelize = new Sequelize(process.env.MYSQL_URL, {
+// If we have a connection URL (preferred for Railway), use it
+if (connectionUrl) {
+  console.log('Using connection URL for database');
+  sequelize = new Sequelize(connectionUrl, {
     dialect: 'mysql',
     logging: false,
     dialectOptions: {
-      ssl: {
-        rejectUnauthorized: true
-      }
+      // Important for Railway: disable SSL verification in production
+      ssl: process.env.NODE_ENV === 'production' ? {
+        rejectUnauthorized: false
+      } : false
     }
   });
 } else {
   console.log('Using individual connection parameters');
-  // Create Sequelize instance using individual parameters
   sequelize = new Sequelize(dbName, dbUser, dbPassword, {
     host: dbHost,
     port: dbPort,
     dialect: 'mysql',
     logging: false,
     dialectOptions: {
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false
+      ssl: process.env.NODE_ENV === 'production' ? {
+        rejectUnauthorized: false
+      } : false
     }
   });
 }
