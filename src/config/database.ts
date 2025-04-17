@@ -3,8 +3,20 @@ import dotenv from 'dotenv';
 
 dotenv.config(); // Load environment variables from .env file
 
-// Prioritize direct connection URL for Railway
-const connectionUrl = process.env.MYSQL_URL || process.env.DATABASE_URL;
+// Determine the connection method
+let useConnectionUrl = false;
+let connectionUrl = '';
+
+// Check if we have MYSQL_URL available (preferred for Railway)
+if (process.env.MYSQL_URL) {
+  useConnectionUrl = true;
+  connectionUrl = process.env.MYSQL_URL;
+  console.log('MYSQL_URL is available, will use direct connection URL');
+} else if (process.env.DATABASE_URL) {
+  useConnectionUrl = true;
+  connectionUrl = process.env.DATABASE_URL;
+  console.log('DATABASE_URL is available, will use direct connection URL');
+}
 
 // Fallback to individual connection parameters if no URL is available
 const dbName = process.env.DB_NAME || 'railway';
@@ -16,17 +28,20 @@ const dbPort = process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 3306;
 // Log connection details for debugging (without sensitive info)
 console.log('=== DATABASE CONNECTION INFO ===');
 console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('Connection URL available:', connectionUrl ? 'Yes' : 'No');
+console.log('Using connection URL:', useConnectionUrl ? 'Yes' : 'No');
 console.log('Host:', dbHost);
 console.log('Database:', dbName);
 console.log('Port:', dbPort);
+console.log('Password defined:', dbPassword ? 'Yes (length: ' + dbPassword.length + ')' : 'No');
+console.log('MYSQL_URL defined:', process.env.MYSQL_URL ? 'Yes' : 'No');
+console.log('MYSQL_ROOT_PASSWORD defined:', process.env.MYSQL_ROOT_PASSWORD ? 'Yes' : 'No');
 
 // Declare sequelize variable
 let sequelize: Sequelize;
 
 // If we have a connection URL (preferred for Railway), use it
-if (connectionUrl) {
-  console.log('Using connection URL for database');
+if (useConnectionUrl) {
+  console.log('Using connection URL for database:', connectionUrl.replace(/:[^:]*@/, ':****@')); // Masquer le mot de passe dans les logs
   sequelize = new Sequelize(connectionUrl, {
     dialect: 'mysql',
     logging: false,
@@ -39,7 +54,11 @@ if (connectionUrl) {
   });
 } else {
   console.log('Using individual connection parameters');
-  sequelize = new Sequelize(dbName, dbUser, dbPassword, {
+  // Utiliser MYSQL_ROOT_PASSWORD si disponible et que DB_PASSWORD n'est pas défini
+  const password = dbPassword || process.env.MYSQL_ROOT_PASSWORD || '';
+  console.log('Final password length:', password.length);
+  
+  sequelize = new Sequelize(dbName, dbUser, password, {
     host: dbHost,
     port: dbPort,
     dialect: 'mysql',
