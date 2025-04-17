@@ -13,7 +13,20 @@ const port = process.env.PORT || 5001;
 connectDB();
 
 // Middleware
-app.use(cors()); // Enable CORS for all routes
+// Configuration CORS avec options spécifiques
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',  // Pour le développement local
+    'https://dbz-battle-game-2025.windsurf.build',  // URL principale de Netlify
+    'https://680111b971b0d100a86f7772--dbz-battle-game-2025-4y5td.netlify.app',  // URL de déploiement spécifique
+    'https://dbz-battle-game-2025-4y5td.netlify.app'  // URL de domaine personnalisé potentiel
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
+app.use(cors(corsOptions)); // Enable CORS with specific options
 app.use(express.json()); // Middleware to parse JSON bodies
 
 // API Routes
