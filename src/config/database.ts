@@ -3,100 +3,67 @@ import dotenv from 'dotenv';
 
 dotenv.config(); // Load environment variables from .env file
 
-// Fonction de débogage pour afficher toutes les variables d'environnement pertinentes
-function debugEnvironmentVariables() {
-  console.log('\n=== DETAILED ENVIRONMENT VARIABLES DEBUG ===');
-  console.log('NODE_ENV:', process.env.NODE_ENV);
-  console.log('DB_HOST:', process.env.DB_HOST);
-  console.log('DB_USER:', process.env.DB_USER);
-  console.log('DB_NAME:', process.env.DB_NAME);
-  console.log('DB_PORT:', process.env.DB_PORT);
-  console.log('DB_PASSWORD exists:', process.env.DB_PASSWORD ? 'Yes (length: ' + process.env.DB_PASSWORD.length + ')' : 'No');
-  console.log('MYSQL_URL exists:', process.env.MYSQL_URL ? 'Yes (length: ' + process.env.MYSQL_URL.length + ')' : 'No');
-  console.log('DATABASE_URL exists:', process.env.DATABASE_URL ? 'Yes (length: ' + process.env.DATABASE_URL.length + ')' : 'No');
-  console.log('MYSQL_ROOT_PASSWORD exists:', process.env.MYSQL_ROOT_PASSWORD ? 'Yes (length: ' + process.env.MYSQL_ROOT_PASSWORD.length + ')' : 'No');
-  
-  // Afficher toutes les variables d'environnement pour voir s'il y a quelque chose d'utile
-  console.log('\n=== ALL ENVIRONMENT VARIABLES (NAMES ONLY) ===');
-  Object.keys(process.env).forEach(key => {
-    console.log(key);
-  });
-  console.log('=== END ENVIRONMENT VARIABLES ===\n');
+// Fonction de débogage pour afficher les variables d'environnement pertinentes de Railway
+function debugRailwayVariables() {
+  console.log('\n=== RAILWAY MYSQL VARIABLES DEBUG ===');
+  console.log('MYSQL_URL:', process.env.MYSQL_URL ? 'Défini (masqué)' : 'Non défini');
+  console.log('MYSQL_DATABASE:', process.env.MYSQL_DATABASE);
+  console.log('MYSQLHOST:', process.env.MYSQLHOST);
+  console.log('MYSQLUSER:', process.env.MYSQLUSER);
+  console.log('MYSQLPORT:', process.env.MYSQLPORT);
+  console.log('MYSQLPASSWORD:', process.env.MYSQLPASSWORD ? 'Défini (longueur: ' + process.env.MYSQLPASSWORD.length + ')' : 'Non défini');
+  console.log('MYSQL_ROOT_PASSWORD:', process.env.MYSQL_ROOT_PASSWORD ? 'Défini (longueur: ' + process.env.MYSQL_ROOT_PASSWORD.length + ')' : 'Non défini');
+  console.log('MYSQL_PUBLIC_URL:', process.env.MYSQL_PUBLIC_URL ? 'Défini (masqué)' : 'Non défini');
+  console.log('=== FIN DES VARIABLES RAILWAY ===\n');
 }
 
 // Exécuter la fonction de débogage au démarrage
-debugEnvironmentVariables();
+debugRailwayVariables();
 
-// Determine the connection method
-let useConnectionUrl = false;
-let connectionUrl = '';
+// Déterminer les paramètres de connexion en utilisant les variables Railway
+const dbName = process.env.MYSQL_DATABASE || process.env.MYSQLDATABASE || 'railway';
+const dbUser = process.env.MYSQLUSER || 'root';
+const dbHost = process.env.MYSQLHOST || 'mysql.railway.internal';
+const dbPassword = process.env.MYSQLPASSWORD || process.env.MYSQL_ROOT_PASSWORD || '';
+const dbPort = process.env.MYSQLPORT ? parseInt(process.env.MYSQLPORT, 10) : 3306;
 
-// Check if we have MYSQL_URL available (preferred for Railway)
-if (process.env.MYSQL_URL) {
-  useConnectionUrl = true;
-  connectionUrl = process.env.MYSQL_URL;
-  console.log('MYSQL_URL is available, will use direct connection URL');
-} else if (process.env.DATABASE_URL) {
-  useConnectionUrl = true;
-  connectionUrl = process.env.DATABASE_URL;
-  console.log('DATABASE_URL is available, will use direct connection URL');
-}
-
-// Fallback to individual connection parameters if no URL is available
-const dbName = process.env.DB_NAME || 'railway';
-const dbUser = process.env.DB_USER || 'root';
-const dbHost = process.env.DB_HOST || 'mysql.railway.internal';
-const dbPassword = process.env.DB_PASSWORD || '';
-const dbPort = process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 3306;
-
-// Log connection details for debugging (without sensitive info)
-console.log('=== DATABASE CONNECTION INFO ===');
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('Using connection URL:', useConnectionUrl ? 'Yes' : 'No');
+// Afficher les paramètres de connexion qui seront utilisés
+console.log('=== PARAMÈTRES DE CONNEXION À LA BASE DE DONNÉES ===');
 console.log('Host:', dbHost);
 console.log('Database:', dbName);
+console.log('User:', dbUser);
 console.log('Port:', dbPort);
-console.log('Password defined:', dbPassword ? 'Yes (length: ' + dbPassword.length + ')' : 'No');
-console.log('MYSQL_URL defined:', process.env.MYSQL_URL ? 'Yes' : 'No');
-console.log('MYSQL_ROOT_PASSWORD defined:', process.env.MYSQL_ROOT_PASSWORD ? 'Yes' : 'No');
+console.log('Password défini:', dbPassword ? 'Oui (longueur: ' + dbPassword.length + ')' : 'Non');
 
-// Declare sequelize variable
+// Déclarer la variable sequelize
 let sequelize: Sequelize;
 
-// Débogage des paramètres de connexion
-console.log('\n=== CONNECTION PARAMETERS DEBUG ===');
-console.log('MYSQL_URL value (masked):', process.env.MYSQL_URL ? process.env.MYSQL_URL.replace(/:[^:]*@/, ':****@') : 'Not defined');
+// Créer une instance Sequelize avec les paramètres Railway explicites
+console.log('\n=== TENTATIVE DE CONNEXION AVEC LES PARAMÈTRES RAILWAY ===');
 
-// Essayer une approche simple et directe avec les paramètres individuels
-console.log('\n=== TRYING DIRECT CONNECTION WITH INDIVIDUAL PARAMETERS ===');
-console.log('DB_USER:', process.env.DB_USER);
-console.log('DB_HOST:', process.env.DB_HOST);
-console.log('DB_PASSWORD exists:', process.env.DB_PASSWORD ? 'Yes (length: ' + process.env.DB_PASSWORD.length + ')' : 'No');
+// Afficher les premiers caractères du mot de passe pour vérification
+if (dbPassword) {
+  console.log('Premiers caractères du mot de passe:', dbPassword.substring(0, 3) + '...');
+}
 
-const password = process.env.DB_PASSWORD || '';
-console.log('Password being used (first 3 chars):', password.substring(0, 3) + '...');
-
-// Créer une instance Sequelize avec les paramètres individuels explicites
-sequelize = new Sequelize(dbName, dbUser, password, {
+sequelize = new Sequelize(dbName, dbUser, dbPassword, {
   host: dbHost,
   port: dbPort,
   dialect: 'mysql',
-  logging: console.log, // Activer les logs SQL pour le débogage
+  logging: true, // Activer les logs SQL pour le débogage
   dialectOptions: {
-    // Désactiver SSL pour le diagnostic
+    // Désactiver SSL pour le diagnostic initial
     ssl: null
   }
 });
 
 // Ajouter un gestionnaire d'erreur spécifique pour le diagnostic
 process.on('unhandledRejection', (reason, promise) => {
-  console.log('\n=== UNHANDLED REJECTION ===');
-  console.log('Reason:', reason);
-  // Ne pas quitter le processus pour permettre la poursuite de l'exécution
+  console.log('\n=== ERREUR NON GÉRÉE DÉTECTÉE ===');
+  console.log('Raison:', reason);
 });
 
-// Ajouter un log pour indiquer la fin de la configuration
-console.log('\n=== DATABASE CONFIGURATION COMPLETE ===');
+console.log('\n=== CONFIGURATION DE LA BASE DE DONNÉES TERMINÉE ===');
 
 export const connectDB = async () => {
   try {
