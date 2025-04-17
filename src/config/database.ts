@@ -3,6 +3,30 @@ import dotenv from 'dotenv';
 
 dotenv.config(); // Load environment variables from .env file
 
+// Fonction de débogage pour afficher toutes les variables d'environnement pertinentes
+function debugEnvironmentVariables() {
+  console.log('\n=== DETAILED ENVIRONMENT VARIABLES DEBUG ===');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('DB_HOST:', process.env.DB_HOST);
+  console.log('DB_USER:', process.env.DB_USER);
+  console.log('DB_NAME:', process.env.DB_NAME);
+  console.log('DB_PORT:', process.env.DB_PORT);
+  console.log('DB_PASSWORD exists:', process.env.DB_PASSWORD ? 'Yes (length: ' + process.env.DB_PASSWORD.length + ')' : 'No');
+  console.log('MYSQL_URL exists:', process.env.MYSQL_URL ? 'Yes (length: ' + process.env.MYSQL_URL.length + ')' : 'No');
+  console.log('DATABASE_URL exists:', process.env.DATABASE_URL ? 'Yes (length: ' + process.env.DATABASE_URL.length + ')' : 'No');
+  console.log('MYSQL_ROOT_PASSWORD exists:', process.env.MYSQL_ROOT_PASSWORD ? 'Yes (length: ' + process.env.MYSQL_ROOT_PASSWORD.length + ')' : 'No');
+  
+  // Afficher toutes les variables d'environnement pour voir s'il y a quelque chose d'utile
+  console.log('\n=== ALL ENVIRONMENT VARIABLES (NAMES ONLY) ===');
+  Object.keys(process.env).forEach(key => {
+    console.log(key);
+  });
+  console.log('=== END ENVIRONMENT VARIABLES ===\n');
+}
+
+// Exécuter la fonction de débogage au démarrage
+debugEnvironmentVariables();
+
 // Determine the connection method
 let useConnectionUrl = false;
 let connectionUrl = '';
@@ -39,54 +63,40 @@ console.log('MYSQL_ROOT_PASSWORD defined:', process.env.MYSQL_ROOT_PASSWORD ? 'Y
 // Declare sequelize variable
 let sequelize: Sequelize;
 
-// Essayer de construire une URL de connexion directement à partir des variables MYSQL_* de Railway
-if (process.env.MYSQL_ROOT_PASSWORD && process.env.NODE_ENV === 'production') {
-  const directUrl = `mysql://root:${process.env.MYSQL_ROOT_PASSWORD}@mysql.railway.internal:3306/railway`;
-  console.log('Constructed direct URL from MYSQL_ROOT_PASSWORD');
-  
-  sequelize = new Sequelize(directUrl, {
-    dialect: 'mysql',
-    logging: console.log, // Activer les logs SQL pour le débogage
-    dialectOptions: {
-      ssl: {
-        rejectUnauthorized: false
-      }
-    }
-  });
-}
-// Si nous avons une URL de connexion (préféré pour Railway), utilisons-la
-else if (useConnectionUrl) {
-  console.log('Using connection URL for database:', connectionUrl.replace(/:[^:]*@/, ':****@')); // Masquer le mot de passe dans les logs
-  
-  sequelize = new Sequelize(connectionUrl, {
-    dialect: 'mysql',
-    logging: console.log, // Activer les logs SQL pour le débogage
-    dialectOptions: {
-      ssl: {
-        rejectUnauthorized: false
-      }
-    }
-  });
-} 
-// Dernier recours: utiliser les paramètres individuels
-else {
-  console.log('Using individual connection parameters');
-  // Utiliser MYSQL_ROOT_PASSWORD si disponible et que DB_PASSWORD n'est pas défini
-  const password = dbPassword || process.env.MYSQL_ROOT_PASSWORD || '';
-  console.log('Final password length:', password.length);
-  
-  sequelize = new Sequelize(dbName, dbUser, password, {
-    host: dbHost,
-    port: dbPort,
-    dialect: 'mysql',
-    logging: console.log, // Activer les logs SQL pour le débogage
-    dialectOptions: {
-      ssl: {
-        rejectUnauthorized: false
-      }
-    }
-  });
-}
+// Débogage des paramètres de connexion
+console.log('\n=== CONNECTION PARAMETERS DEBUG ===');
+console.log('MYSQL_URL value (masked):', process.env.MYSQL_URL ? process.env.MYSQL_URL.replace(/:[^:]*@/, ':****@') : 'Not defined');
+
+// Essayer une approche simple et directe avec les paramètres individuels
+console.log('\n=== TRYING DIRECT CONNECTION WITH INDIVIDUAL PARAMETERS ===');
+console.log('DB_USER:', process.env.DB_USER);
+console.log('DB_HOST:', process.env.DB_HOST);
+console.log('DB_PASSWORD exists:', process.env.DB_PASSWORD ? 'Yes (length: ' + process.env.DB_PASSWORD.length + ')' : 'No');
+
+const password = process.env.DB_PASSWORD || '';
+console.log('Password being used (first 3 chars):', password.substring(0, 3) + '...');
+
+// Créer une instance Sequelize avec les paramètres individuels explicites
+sequelize = new Sequelize(dbName, dbUser, password, {
+  host: dbHost,
+  port: dbPort,
+  dialect: 'mysql',
+  logging: console.log, // Activer les logs SQL pour le débogage
+  dialectOptions: {
+    // Désactiver SSL pour le diagnostic
+    ssl: null
+  }
+});
+
+// Ajouter un gestionnaire d'erreur spécifique pour le diagnostic
+process.on('unhandledRejection', (reason, promise) => {
+  console.log('\n=== UNHANDLED REJECTION ===');
+  console.log('Reason:', reason);
+  // Ne pas quitter le processus pour permettre la poursuite de l'exécution
+});
+
+// Ajouter un log pour indiquer la fin de la configuration
+console.log('\n=== DATABASE CONFIGURATION COMPLETE ===');
 
 export const connectDB = async () => {
   try {
