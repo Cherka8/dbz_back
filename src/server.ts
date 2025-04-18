@@ -1,4 +1,4 @@
-import express, { Express, Request, Response } from 'express';
+import express, { Express, Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { connectDB } from './config/database';
@@ -8,6 +8,13 @@ dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT || 5001;
+
+// --- AJOUT DU LOG ---
+app.use((req: Request, res: Response, next: NextFunction) => {
+  console.log(`<<<<< INCOMING REQUEST: ${req.method} ${req.originalUrl} from ${req.ip} >>>>>`);
+  next(); // Important: passer à la suite du middleware
+});
+// --- FIN AJOUT DU LOG ---
 
 // Connect to Database
 connectDB();
